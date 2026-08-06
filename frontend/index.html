@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Marketing Analyst Agent</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">VibeMarketolog Agent API demo</p>
+        <h1>AI Marketing Analyst Agent</h1>
+        <p class="lead">
+          MVP-сервис для быстрого маркетингового анализа: вводные бизнеса уходят в Agent API,
+          агент возвращает сегменты ЦА, гипотезы, офферы, креативы и план действий.
+        </p>
+      </div>
+      <div class="signal">
+        <span>POST /analyze</span>
+        <strong>FastAPI → Vibe Agent API → JSON result</strong>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <form id="analyzeForm" class="panel form-panel">
+        <div class="panel-head">
+          <h2>Вводные бизнеса</h2>
+          <button class="ghost" type="button" id="fillDemo">Заполнить пример</button>
+        </div>
+
+        <label>
+          Название бизнеса
+          <input name="business_name" required placeholder="Стоматология в Москве">
+        </label>
+
+        <label>
+          Ниша
+          <input name="industry" required placeholder="Стоматология / медицинские услуги">
+        </label>
+
+        <label>
+          Описание продукта
+          <textarea name="product" required placeholder="Имплантация зубов под ключ, консультация врача, 3D-диагностика, рассрочка"></textarea>
+        </label>
+
+        <label>
+          Целевая аудитория
+          <textarea name="audience" required placeholder="Люди 35-65 лет, потеряли зубы, боятся боли и переплаты, сравнивают клиники"></textarea>
+        </label>
+
+        <div class="grid-2">
+          <label>
+            География
+            <input name="location" required placeholder="Москва и МО">
+          </label>
+          <label>
+            Бюджет на рекламу
+            <input name="budget" required placeholder="150 000 ₽ / месяц">
+          </label>
+        </div>
+
+        <label>
+          Главная цель
+          <select name="goal" required>
+            <option value="получить лиды">Получить лиды</option>
+            <option value="увеличить продажи">Увеличить продажи</option>
+            <option value="протестировать оффер">Протестировать оффер</option>
+          </select>
+        </label>
+
+        <button class="primary" type="submit">Получить маркетинговый анализ</button>
+      </form>
+
+      <section class="panel result-panel">
+        <div class="panel-head">
+          <h2>Результат агента</h2>
+          <span id="status" class="status">Готов к запросу</span>
+        </div>
+
+        <div id="emptyState" class="empty">
+          Заполни форму и нажми кнопку. Здесь появится структурированный анализ,
+          который можно показать как демо работы с Agent API.
+        </div>
+
+        <div id="result" class="result hidden"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
