@@ -1,0 +1,300 @@
+{
+  "name": "VibeMarketolog - AI Marketing Analyst Agent MVP",
+  "nodes": [
+    {
+      "id": "vibe_note_747d182d",
+      "name": "README - Paste Vibe API Key",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -300
+      ],
+      "parameters": {
+        "width": 500,
+        "height": 300,
+        "content": "AI Marketing Analyst Agent MVP\\n\\nНовый независимый workflow для тестового задания VibeMarketolog.\\n\\n1. Открой HTTP-ноды:\\n   - Vibe - Estimate Cost\\n   - Vibe - Generate Analysis\\n2. В header Authorization замени:\\n   Bearer PASTE_VIBE_API_KEY_HERE\\n   на свой Vibe Agent API key.\\n\\nWebhook принимает POST JSON с полями бизнеса и возвращает структурированный маркетинговый анализ.\\n\\nAPI docs: https://lk.vibemarketolog.ru/docs/agent-api"
+      }
+    },
+    {
+      "id": "vibe_webhook_83ff1aec",
+      "name": "Webhook - Marketing Brief",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        80
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vibemarketolog-marketing-analyst",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "vibe_build_a4fac8a6",
+      "name": "Code - Build Vibe Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const input = $json.body || $json;\n\nconst payload = {\n  business_name: String(input.business_name || input.businessName || '').trim(),\n  industry: String(input.industry || input.niche || '').trim(),\n  product: String(input.product || '').trim(),\n  audience: String(input.audience || '').trim(),\n  location: String(input.location || input.geo || '').trim(),\n  budget: String(input.budget || '').trim(),\n  goal: String(input.goal || 'получить лиды').trim(),\n};\n\nconst required = ['business_name', 'industry', 'product', 'audience', 'location', 'budget', 'goal'];\nconst missing = required.filter((key) => !payload[key]);\nif (missing.length) {\n  return [{ json: { ok: false, statusCode: 400, error: 'Missing required fields', missing, received: input } }];\n}\n\nconst system = `Ты — AI Marketing Analyst.\n\nТвоя задача:\n- анализировать бизнес;\n- находить точки роста;\n- предлагать рекламные гипотезы;\n- создавать варианты офферов;\n- предлагать идеи рекламных креативов;\n- давать следующие шаги.\n\nРаботай как практичный performance-маркетолог. Верни только валидный JSON без Markdown.\nФормат:\n{\n  \"business_analysis\": \"\",\n  \"target_audience\": [],\n  \"marketing_hypotheses\": [],\n  \"offer_variants\": [],\n  \"creative_ideas\": [],\n  \"recommended_actions\": []\n}`;\n\nconst prompt = `Проанализируй бизнес и подготовь маркетинговый анализ.\n\nВводные:\n- Название бизнеса: ${payload.business_name}\n- Ниша: ${payload.industry}\n- Описание продукта: ${payload.product}\n- Целевая аудитория: ${payload.audience}\n- География: ${payload.location}\n- Бюджет на рекламу: ${payload.budget}\n- Главная цель: ${payload.goal}\n\nНужно:\n1. Коротко оценить бизнес, продукт, рынок и точки роста.\n2. Разложить целевую аудиторию на понятные сегменты.\n3. Предложить 3 рекламные гипотезы.\n4. Предложить 5 вариантов оффера.\n5. Предложить идеи рекламных креативов.\n6. Дать список следующих действий на 7 дней.\n\nПиши на русском языке, конкретно, без воды. Верни строго JSON.`;\n\nconst vibe_body = {\n  type: 'text',\n  model: 'claude-opus-5',\n  system,\n  prompt,\n  max_tokens: 2200,\n  effort: 'medium',\n  thinking: false,\n  idempotency_key: 'marketing-analysis-' + Date.now() + '-' + Math.random().toString(16).slice(2),\n};\n\nreturn [{ json: { ok: true, payload, vibe_body } }];"
+      }
+    },
+    {
+      "id": "vibe_if_valid_66f00883",
+      "name": "IF - Input Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -100,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "valid",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "vibe_estimate_9a5456b0",
+      "name": "Vibe - Estimate Cost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        170,
+        -20
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://lk.vibemarketolog.ru/api/agent/generate/estimate?strict=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PASTE_VIBE_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($node['Code - Build Vibe Request'].json.vibe_body) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "vibe_generate_3bdc458e",
+      "name": "Vibe - Generate Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        450,
+        -20
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://lk.vibemarketolog.ru/api/agent/generate?strict=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PASTE_VIBE_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($node['Code - Build Vibe Request'].json.vibe_body) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "vibe_parse_b0676423",
+      "name": "Code - Parse Vibe JSON Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        730,
+        -20
+      ],
+      "parameters": {
+        "jsCode": "function stripFences(value) {\n  return String(value || '').replace(/^\\s*```(?:json)?\\s*/i, '').replace(/\\s*```\\s*$/i, '').trim();\n}\n\nfunction parseJson(value) {\n  const cleaned = stripFences(value);\n  try { return JSON.parse(cleaned); } catch (error) {\n    const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n    if (match) return JSON.parse(match[0]);\n    throw error;\n  }\n}\n\nconst raw = $json.text || $json.response?.text || '';\nconst parsed = parseJson(raw);\nlet estimate = {};\ntry { estimate = $items('Vibe - Estimate Cost')[0].json; } catch (_) {}\n\nreturn [{\n  json: {\n    ok: true,\n    business_analysis: parsed.business_analysis || '',\n    target_audience: parsed.target_audience || [],\n    marketing_hypotheses: parsed.marketing_hypotheses || [],\n    offer_variants: parsed.offer_variants || [],\n    creative_ideas: parsed.creative_ideas || [],\n    recommended_actions: parsed.recommended_actions || [],\n    estimate,\n    vibe_meta: {\n      generation_id: $json.generation_id,\n      model: $json.model,\n      usage: $json.usage,\n      cost: $json.cost,\n      reserved: $json.reserved,\n      refunded: $json.refunded,\n      balance_after: $json.balance_after,\n    },\n  },\n}];"
+      }
+    },
+    {
+      "id": "vibe_error_78595de7",
+      "name": "Code - API Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        730,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const details = $json.error?.message || $json.message || JSON.stringify($json).slice(0, 1200);\nreturn [{\n  json: {\n    ok: false,\n    statusCode: $json.statusCode || 502,\n    error: 'VibeMarketolog API request failed',\n    details,\n    hint: 'Проверь API ключ в HTTP-ноды: Authorization: Bearer PASTE_VIBE_API_KEY_HERE. У ключа должны быть read/generate scopes и доступный баланс.',\n  },\n}];"
+      }
+    },
+    {
+      "id": "vibe_respond_6680195d",
+      "name": "Respond - JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1010,
+        80
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Marketing Brief": {
+      "main": [
+        [
+          {
+            "node": "Code - Build Vibe Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Build Vibe Request": {
+      "main": [
+        [
+          {
+            "node": "IF - Input Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Input Valid": {
+      "main": [
+        [
+          {
+            "node": "Vibe - Estimate Cost",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vibe - Estimate Cost": {
+      "main": [
+        [
+          {
+            "node": "Vibe - Generate Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - API Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vibe - Generate Analysis": {
+      "main": [
+        [
+          {
+            "node": "Code - Parse Vibe JSON Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - API Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parse Vibe JSON Result": {
+      "main": [
+        [
+          {
+            "node": "Respond - JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - API Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond - JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}
