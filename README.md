@@ -1,4 +1,4 @@
-# AI Marketing Analyst Agent
+﻿# AI Marketing Analyst Agent
 
 MVP-сервис для демонстрации интеграции с VibeMarketolog Agent API.
 
@@ -83,7 +83,7 @@ cp .env.example .env
 5. Вставить API-ключ:
 
 ```env
-VIBE_API_KEY=your_vibe_api_key_here
+SPA_ACCESS_TOKEN=your_spa_access_token_here
 ```
 
 6. Запустить сервер:
@@ -111,6 +111,29 @@ http://127.0.0.1:8000
   "goal": "получить лиды"
 }
 ```
+
+## Live verification
+
+To prove that the MVP made real calls to VibeMarketolog Agent API, use:
+
+```bash
+python backend/run_live_demo.py --repeat 2
+```
+
+The script performs:
+
+```text
+/generate/estimate -> /generate -> save result artifact
+```
+
+After launch, `results/` contains:
+
+- `live_run_*.json` with request, estimate, generation metadata and structured result;
+- `LIVE_RUNS.md` with generation IDs, model, cost and balance_after.
+
+Current saved live runs are available in [esults/LIVE_RUNS.md](results/LIVE_RUNS.md).
+
+Secrets are not stored in the repository.
 
 ## n8n workflow
 
@@ -142,3 +165,4 @@ Authorization: Bearer PASTE_VIBE_API_KEY_HERE
 - структурированный JSON-ответ;
 - простой frontend для демонстрации результата;
 - n8n workflow как no-code/automation вариант той же логики.
+
