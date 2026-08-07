@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 import os
 from typing import Any
@@ -11,10 +11,11 @@ load_dotenv()
 
 logger = logging.getLogger("vibe_client")
 
-VIBE_API_BASE_URL = os.getenv("VIBE_API_BASE_URL", "https://lk.vibemarketolog.ru/api/agent")
-VIBE_API_KEY = os.getenv("VIBE_API_KEY", "")
+SPA_BASE_URL = os.getenv("SPA_BASE_URL", "https://lk.vibemarketolog.ru").rstrip("/")
+VIBE_API_BASE_URL = os.getenv("VIBE_API_BASE_URL", f"{SPA_BASE_URL}/api/agent")
+VIBE_API_KEY = os.getenv("VIBE_API_KEY") or os.getenv("SPA_ACCESS_TOKEN", "")
 VIBE_TEXT_MODEL = os.getenv("VIBE_TEXT_MODEL", "claude-opus-5")
-VIBE_MAX_TOKENS = int(os.getenv("VIBE_MAX_TOKENS", "2200"))
+VIBE_MAX_TOKENS = int(os.getenv("VIBE_MAX_TOKENS", "3000"))
 
 
 class VibeApiError(RuntimeError):
@@ -23,7 +24,7 @@ class VibeApiError(RuntimeError):
 
 def _headers() -> dict[str, str]:
     if not VIBE_API_KEY:
-        raise VibeApiError("VIBE_API_KEY is not configured. Add it to .env first.")
+        raise VibeApiError("VIBE_API_KEY or SPA_ACCESS_TOKEN is not configured. Add it to .env first.")
 
     return {
         "Authorization": f"Bearer {VIBE_API_KEY}",
@@ -39,8 +40,18 @@ def _extract_json_from_text(text: str) -> dict[str, Any]:
 
     try:
         return json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise VibeApiError(f"Agent returned non-JSON text: {text[:500]}") from exc
+    except json.JSONDecodeError as first_error:
+        try:
+            return json.loads(cleaned, strict=False)
+        except json.JSONDecodeError:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start != -1 and end != -1 and end > start:
+                try:
+                    return json.loads(cleaned[start : end + 1], strict=False)
+                except json.JSONDecodeError:
+                    pass
+            raise VibeApiError(f"Agent returned non-JSON text: {text[:500]}") from first_error
 
 
 async def estimate_agent_request(system: str, prompt: str) -> dict[str, Any]:
@@ -52,11 +63,12 @@ async def estimate_agent_request(system: str, prompt: str) -> dict[str, Any]:
         "max_tokens": VIBE_MAX_TOKENS,
         "effort": "medium",
         "thinking": False,
+        "strict": True,
     }
 
     async with httpx.AsyncClient(timeout=40) as client:
         response = await client.post(
-            f"{VIBE_API_BASE_URL}/generate/estimate?strict=true",
+            f"{VIBE_API_BASE_URL}/generate/estimate",
             headers=_headers(),
             json=body,
         )
@@ -77,6 +89,7 @@ async def send_agent_request(system: str, prompt: str) -> dict[str, Any]:
         "max_tokens": VIBE_MAX_TOKENS,
         "effort": "medium",
         "thinking": False,
+        "strict": True,
         "idempotency_key": f"marketing-analysis-{uuid4()}",
     }
 
@@ -84,7 +97,7 @@ async def send_agent_request(system: str, prompt: str) -> dict[str, Any]:
 
     async with httpx.AsyncClient(timeout=90) as client:
         response = await client.post(
-            f"{VIBE_API_BASE_URL}/generate?strict=true",
+            f"{VIBE_API_BASE_URL}/generate",
             headers=_headers(),
             json=body,
         )
@@ -100,6 +113,7 @@ async def send_agent_request(system: str, prompt: str) -> dict[str, Any]:
     parsed_result = _extract_json_from_text(data["text"])
     return {
         "result": parsed_result,
+        "raw_text": data["text"],
         "vibe_meta": {
             "generation_id": data.get("generation_id"),
             "model": data.get("model"),
@@ -110,3 +124,5 @@ async def send_agent_request(system: str, prompt: str) -> dict[str, Any]:
             "balance_after": data.get("balance_after"),
         },
     }
+
+
